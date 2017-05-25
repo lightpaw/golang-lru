@@ -41,7 +41,7 @@ func (c *Cache) Purge() {
 }
 
 // Add adds a value to the cache.  Returns true if an eviction occurred.
-func (c *Cache) Add(key int64, value simplelru.VersionedValue) bool {
+func (c *Cache) Add(key int64, value simplelru.VersionedValue) simplelru.VersionedValue {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.lru.Add(key, value)
@@ -68,21 +68,6 @@ func (c *Cache) Peek(key int64) (simplelru.VersionedValue, bool) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.lru.Peek(key)
-}
-
-// ContainsOrAdd checks if a key is in the cache  without updating the
-// recent-ness or deleting it for being stale,  and if not, adds the value.
-// Returns whether found and whether an eviction occurred.
-func (c *Cache) ContainsOrAdd(key int64, value simplelru.VersionedValue) (ok, evict bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if c.lru.Contains(key) {
-		return true, false
-	} else {
-		evict := c.lru.Add(key, value)
-		return false, evict
-	}
 }
 
 // Remove removes the provided key from the cache.
