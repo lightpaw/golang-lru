@@ -117,26 +117,6 @@ func TestLRU_GetOldest_RemoveOldest(t *testing.T) {
 	}
 }
 
-// Test that Add returns true/false if an eviction occurred
-func TestLRU_Add(t *testing.T) {
-	evictCounter := 0
-	onEvicted := func(k int64, v VersionedValue) {
-		evictCounter += 1
-	}
-
-	l, err := NewLRU(1, onEvicted)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if l.Add(1, &testValue{i: 1}) == true || evictCounter != 0 {
-		t.Errorf("should not have an eviction")
-	}
-	if l.Add(2, &testValue{i: 2}) == false || evictCounter != 1 {
-		t.Errorf("should have an eviction")
-	}
-}
-
 // Test that Contains doesn't update recent-ness
 func TestLRU_Contains(t *testing.T) {
 	l, err := NewLRU(2, nil)
@@ -181,16 +161,22 @@ func TestLRU_Add_WithVersion(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	l.Add(1, &testValue{i: 1, v: 10})
+	if v := l.Add(1, &testValue{i: 1, v: 10}); v.Version() != 10 {
+		t.Fatalf("should return obj")
+	}
 	l.Add(2, &testValue{i: 2, v: 10})
 
-	l.Add(1, &testValue{i: 11, v: 9})
+	if v := l.Add(1, &testValue{i: 11, v: 9}); v.Version() != 10 {
+		t.Fatalf("should not return old version")
+	}
 
 	if v, ok := l.Peek(1); !ok || v.(*testValue).i != 1 {
 		t.Errorf("1 should be set to 1: %v, %v", v, ok)
 	}
 
-	l.Add(1, &testValue{i: 22, v: 11})
+	if v := l.Add(1, &testValue{i: 22, v: 11}); v.Version() != 11 {
+		t.Fatalf("should return new version")
+	}
 
 	if v, ok := l.Peek(1); !ok || v.(*testValue).i != 22 {
 		t.Errorf("1 should be set to 22: %v, %v", v, ok)

@@ -51,16 +51,19 @@ func (c *LRU) Purge() {
 	c.evictList.Init()
 }
 
-// Add adds a value to the cache.  Returns true if an eviction occurred.
-func (c *LRU) Add(key int64, value VersionedValue) bool {
+// Add adds a value to the cache.  Returns the object that's in the cache after the call.
+func (c *LRU) Add(key int64, value VersionedValue) VersionedValue {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
 		c.evictList.MoveToFront(ent)
 
 		if entry := ent.Value.(*entry); entry.value.Version() < value.Version() {
 			entry.value = value
+
+			return value
+		} else {
+			return entry.value
 		}
-		return false
 	}
 
 	// Add new item
@@ -73,7 +76,7 @@ func (c *LRU) Add(key int64, value VersionedValue) bool {
 	if evict {
 		c.removeOldest()
 	}
-	return evict
+	return value
 }
 
 // Get looks up a key's value from the cache.
